@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GbemiShield AI — Grand Marina Security Operations</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #080808;
+            --bg-card: rgba(20,20,20,0.85);
+            --border: rgba(255,255,255,0.08);
+            --border-strong: rgba(255,255,255,0.12);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255,255,255,0.6);
+            --text-tertiary: rgba(255,255,255,0.3);
+            --red: #E8192C;
+            --red-dark: #8B0000;
+            --red-light: #FF6B6B;
+            --green: #30D158;
+            --orange: #FF9F0A;
+            --orange-light: #FFD60A;
+            --shadow: 0 8px 32px rgba(0,0,0,0.6);
+            --radius: 18px;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content:'';
+            position:fixed; top:-20%; left:-10%; width:80%; height:80%;
+            background: radial-gradient(ellipse, rgba(232,25,44,0.1) 0%, transparent 70%);
+            pointer-events:none; z-index:0;
+        }
+
+        body::after {
+            content:'';
+            position:fixed; bottom:-20%; right:-10%; width:60%; height:60%;
+            background: radial-gradient(ellipse, rgba(255,159,10,0.05) 0%, transparent 70%);
+            pointer-events:none; z-index:0;
+        }
+
+        /* HEADER */
+        .header {
+            position:sticky; top:0; z-index:100;
+            background: rgba(8,8,8,0.92);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(232,25,44,0.25);
+            padding: 0 2.5rem; height:64px;
+            display:flex; align-items:center; justify-content:space-between;
+        }
+
+        .header-left { display:flex; align-items:center; gap:12px; }
+
+        .logo {
+            width:36px; height:36px;
+            background: linear-gradient(135deg, #E8192C, #8B0000);
+            border-radius:10px; display:flex; align-items:center;
+            justify-content:center; font-size:1.2rem;
+            box-shadow: 0 2px 12px rgba(232,25,44,0.5);
+        }
+
+        .brand-name { font-size:1.15rem; font-weight:600; color:#FF6B6B; }
+        .brand-sub  { font-size:0.78rem; color:var(--text-secondary); margin-top:1px; }
+
+        .ai-badge {
+            display:inline-block;
+            background: linear-gradient(90deg, var(--orange), var(--orange-light));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+            background-clip:text; font-weight:700; font-size:0.75rem; letter-spacing:0.05em;
+        }
+
+        .header-right { display:flex; align-items:center; gap:16px; }
+
+        .live-pill {
+            display:flex; align-items:center; gap:6px;
+            background: rgba(48,209,88,0.12);
+            border:1px solid rgba(48,209,88,0.25);
+            border-radius:20px; padding:5px 12px;
+            font-size:0.82rem; font-weight:500; color:#1a7f37;
+        }
+
+        .live-dot {
+            width:7px; height:7px; border-radius:50%;
+            background:var(--green);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%,100%{opacity:1; box-shadow:0 0 0 0 rgba(48,209,88,0.4);}
+            50%{opacity:0.8; box-shadow:0 0 0 4px rgba(48,209,88,0);}
+        }
+
+        .clock { font-family:'JetBrains Mono',monospace; font-size:0.9rem; color:var(--text-secondary); font-weight:500; }
+
+        /* MAIN */
+        .main { position:relative; z-index:1; max-width:1400px; margin:0 auto; padding:2.5rem 2.5rem 4rem; }
+
+        .page-header { margin-bottom:2rem; animation:fadeUp 0.5s ease both; }
+        .page-title { font-size:2.4rem; font-weight:700; letter-spacing:-1px; line-height:1.1; }
+        .page-title span { background:linear-gradient(135deg,#E8192C,#FF9F0A); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .page-subtitle { font-size:1rem; color:var(--text-secondary); margin-top:0.5rem; }
+
+        @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+        /* MAYA */
+        .maya-bar {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:1.25rem 1.75rem;
+            margin-bottom:2rem; display:flex; align-items:center; gap:1rem;
+            box-shadow:var(--shadow); animation:fadeUp 0.5s 0.05s ease both;
+        }
+
+        .maya-av {
+            width:44px; height:44px; border-radius:50%;
+            background:linear-gradient(135deg,#E8192C,#8B0000);
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.3rem; flex-shrink:0;
+        }
+
+        .maya-name-tag { font-size:0.82rem; font-weight:600; color:#FF6B6B; }
+        .maya-quote { font-size:0.9rem; color:var(--text-secondary); margin-top:1px; line-height:1.4; }
+
+        /* STATS BAR */
+        .status-bar {
+            display:grid; grid-template-columns:repeat(4,1fr);
+            gap:1rem; margin-bottom:2rem;
+            animation:fadeUp 0.5s 0.1s ease both;
+        }
+
+        .status-tile {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:1.25rem 1.5rem;
+            box-shadow:var(--shadow); display:flex; align-items:center; gap:14px;
+            transition:transform 0.2s, box-shadow 0.2s;
+        }
+
+        .status-tile:hover { transform:translateY(-2px); box-shadow:0 12px 40px rgba(0,0,0,0.8); }
+
+        .tile-icon {
+            width:44px; height:44px; border-radius:12px;
+            display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;
+        }
+
+        .icon-red    { background:rgba(232,25,44,0.1); }
+        .icon-green  { background:rgba(48,209,88,0.1); }
+        .icon-orange { background:rgba(255,159,10,0.1); }
+        .icon-gray   { background:rgba(255,255,255,0.05); }
+
+        .tile-val {
+            font-size:1.8rem; font-weight:700;
+            font-family:'JetBrains Mono',monospace; letter-spacing:-0.5px; line-height:1;
+        }
+
+        .val-green  { color:var(--green); }
+        .val-red    { color:var(--red); }
+        .val-orange { color:var(--orange); }
+        .val-gray   { color:var(--text-secondary); }
+
+        .tile-label { font-size:0.82rem; color:var(--text-secondary); margin-top:3px; font-weight:500; }
+
+        /* SENSORS */
+        .section-label {
+            font-size:0.78rem; font-weight:600; text-transform:uppercase;
+            letter-spacing:0.8px; color:var(--text-tertiary); margin-bottom:1rem;
+        }
+
+        .sensors-grid {
+            display:grid; grid-template-columns:repeat(3,1fr);
+            gap:1.25rem; margin-bottom:2rem;
+            animation:fadeUp 0.5s 0.2s ease both;
+        }
+
+        .sensor-card {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:1.75rem;
+            box-shadow:var(--shadow); transition:transform 0.25s, box-shadow 0.25s;
+            position:relative; overflow:hidden;
+        }
+
+        .sensor-card::after {
+            content:''; position:absolute; top:0; left:0; right:0; height:3px;
+            background:linear-gradient(90deg,#E8192C,#8B0000); opacity:0; transition:opacity 0.3s;
+        }
+
+        .sensor-card.online::after { opacity:1; }
+        .sensor-card:hover { transform:translateY(-4px); box-shadow:0 20px 60px rgba(0,0,0,0.8); }
+
+        .sensor-card.attack-flash { animation:attackFlash 0.6s ease; border-color:rgba(232,25,44,0.4); }
+        @keyframes attackFlash { 0%,100%{background:var(--bg-card)} 50%{background:rgba(232,25,44,0.06)} }
+
+        .sensor-card.ai-flash { animation:aiFlash 0.8s ease; border-color:rgba(255,159,10,0.4); }
+        @keyframes aiFlash { 0%,100%{background:var(--bg-card)} 50%{background:rgba(255,159,10,0.06)} }
+
+        .sensor-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; }
+
+        .sensor-icon-wrap {
+            width:48px; height:48px; border-radius:14px;
+            background:rgba(232,25,44,0.08); display:flex; align-items:center; justify-content:center; font-size:1.6rem;
+        }
+
+        .badge {
+            display:flex; align-items:center; gap:5px;
+            padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:600;
+        }
+
+        .badge-offline { background:rgba(174,174,178,0.15); color:var(--text-tertiary); }
+        .badge-online  { background:rgba(48,209,88,0.12); color:#1a7f37; border:1px solid rgba(48,209,88,0.2); }
+
+        .badge-dot { width:6px; height:6px; border-radius:50%; }
+        .badge-offline .badge-dot { background:var(--text-tertiary); }
+        .badge-online  .badge-dot { background:var(--green); animation:pulse-dot 2s infinite; }
+
+        .sensor-name { font-size:1rem; font-weight:600; margin-bottom:1.25rem; }
+
+        .metrics-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+
+        .metric-label { font-size:0.75rem; color:var(--text-secondary); font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+        .metric-val { font-size:1.6rem; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--text-primary); letter-spacing:-0.5px; transition:color 0.3s; }
+        .metric-unit { font-size:0.75rem; color:var(--text-secondary); font-weight:400; margin-left:2px; }
+        .metric-val.flash { color:var(--red-light); }
+        .metric-val.ai-flash-val { color:var(--orange); }
+
+        .pressure-track { margin-top:1.25rem; height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+        .pressure-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#E8192C,#8B0000); transition:width 0.6s cubic-bezier(0.25,1,0.5,1); }
+        .pressure-fill.warn { background:linear-gradient(90deg,var(--orange),#E8192C); }
+
+        /* BOTTOM GRID */
+        .bottom-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.25rem; animation:fadeUp 0.5s 0.3s ease both; }
+
+        .panel {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--radius); padding:1.75rem; box-shadow:var(--shadow);
+        }
+
+        .panel-title {
+            font-size:0.78rem; font-weight:600; text-transform:uppercase;
+            letter-spacing:0.8px; color:var(--text-tertiary);
+            margin-bottom:1.25rem; display:flex; align-items:center; gap:8px;
+        }
+
+        .panel-title-dot { width:6px; height:6px; border-radius:50%; background:#E8192C; }
+
+        /* STATUS PANEL */
+        .sec-normal {
+            display:flex; align-items:center; gap:12px;
+            padding:1rem 1.25rem;
+            background:rgba(48,209,88,0.07); border:1px solid rgba(48,209,88,0.2);
+            border-radius:12px; margin-bottom:1rem;
+        }
+
+        .sec-icon { font-size:1.6rem; }
+        .sec-title { font-size:0.95rem; font-weight:600; color:#1a7f37; }
+        .sec-desc  { font-size:0.82rem; color:var(--text-secondary); margin-top:2px; }
+
+        /* ATTACK BOX (red) */
+        .attack-box {
+            padding:1rem 1.25rem;
+            background:rgba(232,25,44,0.05); border:1px solid rgba(232,25,44,0.2);
+            border-radius:12px; display:none; animation:slideDown 0.3s ease; margin-bottom:1rem;
+        }
+
+        .attack-box.show { display:block; }
+
+        /* AI BOX (orange) */
+        .ai-box {
+            padding:1rem 1.25rem;
+            background:rgba(255,159,10,0.05); border:1px solid rgba(255,159,10,0.2);
+            border-radius:12px; display:none; animation:slideDown 0.3s ease; margin-bottom:1rem;
+        }
+
+        .ai-box.show { display:block; }
+
+        @keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+
+        .alert-badge {
+            display:inline-flex; align-items:center; gap:6px;
+            padding:3px 10px; border-radius:6px;
+            font-size:0.72rem; font-weight:700; letter-spacing:0.5px; text-transform:uppercase;
+            margin-bottom:8px;
+        }
+
+        .badge-red    { background:var(--red); color:white; animation:blink-badge 1s infinite; }
+        .badge-orange { background:var(--orange); color:white; }
+
+        @keyframes blink-badge { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+        .alert-row { display:flex; justify-content:space-between; font-size:0.83rem; color:var(--text-secondary); margin-top:4px; }
+        .alert-row strong { color:var(--text-primary); }
+
+        .blocked-badge {
+            display:flex; align-items:center; gap:6px; margin-top:10px;
+            padding:6px 12px; border-radius:8px; font-size:0.8rem; font-weight:600;
+        }
+
+        .blocked-red    { background:rgba(48,209,88,0.1); border:1px solid rgba(48,209,88,0.2); color:#1a7f37; }
+        .blocked-orange { background:rgba(255,159,10,0.1); border:1px solid rgba(255,159,10,0.2); color:var(--orange); }
+
+        .defense-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:1rem; }
+        .tag {
+            padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:500;
+            background:rgba(232,25,44,0.08); border:1px solid rgba(232,25,44,0.2); color:#FF6B6B;
+        }
+
+        .tag-ai {
+            padding:4px 10px; border-radius:6px; font-size:0.75rem; font-weight:500;
+            background:rgba(255,159,10,0.08); border:1px solid rgba(255,159,10,0.2); color:var(--orange);
+        }
+
+        /* EVENT LOG */
+        .event-log { max-height:280px; overflow-y:auto; }
+        .event-log::-webkit-scrollbar { width:4px; }
+        .event-log::-webkit-scrollbar-track { background:transparent; }
+        .event-log::-webkit-scrollbar-thumb { background:var(--border-strong); border-radius:2px; }
+
+        .event-row {
+            display:flex; align-items:flex-start; gap:10px;
+            padding:8px 0; border-bottom:1px solid var(--border);
+            font-size:0.83rem; animation:fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+
+        .event-row:last-child { border-bottom:none; }
+        .event-dot { width:8px; height:8px; border-radius:50%; margin-top:4px; flex-shrink:0; }
+        .event-dot.valid     { background:var(--green); }
+        .event-dot.attack    { background:var(--red); }
+        .event-dot.ai-anomaly{ background:var(--orange); }
+        .event-dot.info      { background:#FF6B6B; }
+
+        .event-time { font-family:'JetBrains Mono',monospace; font-size:0.73rem; color:var(--text-tertiary); flex-shrink:0; padding-top:1px; }
+        .event-msg  { flex:1; color:var(--text-secondary); line-height:1.4; }
+        .event-msg.attack-msg    { color:var(--red-light); }
+        .event-msg.valid-msg     { color:#30D158; }
+        .event-msg.ai-anomaly-msg{ color:var(--orange); }
+
+        /* SYSTEM INFO */
+        .sys-rows { display:flex; flex-direction:column; gap:10px; }
+        .sys-row {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:10px 14px; background:rgba(255,255,255,0.02);
+            border:1px solid var(--border); border-radius:10px; font-size:0.85rem;
+        }
+        .sys-row-label { color:var(--text-secondary); font-weight:500; }
+        .sys-row-val { font-family:'JetBrains Mono',monospace; font-size:0.8rem; font-weight:500; color:var(--text-primary); }
+        .sys-badge { padding:2px 8px; border-radius:6px; font-size:0.72rem; font-weight:600; }
+        .sys-badge.green  { background:rgba(48,209,88,0.1); color:#1a7f37; }
+        .sys-badge.red    { background:rgba(232,25,44,0.1); color:#FF6B6B; }
+        .sys-badge.orange { background:rgba(255,159,10,0.1); color:var(--orange); }
+
+        @media(max-width:1200px){.sensors-grid{grid-template-columns:1fr 1fr}.bottom-grid{grid-template-columns:1fr 1fr}.status-bar{grid-template-columns:1fr 1fr}}
+        @media(max-width:768px){.sensors-grid{grid-template-columns:1fr}.bottom-grid{grid-template-columns:1fr}.main{padding:1.5rem}}
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="header-left">
+        <div class="logo">🛡️</div>
+        <div>
+            <div class="brand-name">GbemiShield <span class="ai-badge">AI</span></div>
+            <div class="brand-sub">Grand Marina Security Operations</div>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+        <div class="clock" id="clock">--:--:--</div>
+    </div>
+</header>
+
+<div class="main">
+
+    <div class="page-header">
+        <div class="page-title">Water Security <span>AI Operations</span></div>
+        <div class="page-subtitle">Rule-based + AI anomaly detection — powered by Isolation Forest & Hydroficient</div>
+    </div>
+
+    <div class="maya-bar">
+        <div class="maya-av">👩‍💻</div>
+        <div>
+            <div class="maya-name-tag">Maya Chen, Senior Security Engineer</div>
+            <div class="maya-quote">"Red = rule caught it. Orange = AI flagged it. Green = all clear. Two layers of defense — what rules miss, the model catches."</div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-tile">
+            <div class="tile-icon icon-green">✅</div>
+            <div><div class="tile-val val-green" id="stat-valid">0</div><div class="tile-label">Valid Messages</div></div>
+        </div>
+        <div class="status-tile">
+            <div class="tile-icon icon-red">🛡️</div>
+            <div><div class="tile-val val-red" id="stat-rejected">0</div><div class="tile-label">Attacks Blocked</div></div>
+        </div>
+        <div class="status-tile">
+            <div class="tile-icon icon-orange">🤖</div>
+            <div><div class="tile-val val-orange" id="stat-ai">0</div><div class="tile-label">AI Anomalies</div></div>
+        </div>
+        <div class="status-tile">
+            <div class="tile-icon icon-gray">📊</div>
+            <div><div class="tile-val val-gray" id="stat-total">0</div><div class="tile-label">Total Processed</div></div>
+        </div>
+    </div>
+
+    <div class="section-label">Live Sensor Data</div>
+    <div class="sensors-grid">
+        <div class="sensor-card" id="card-main_building">
+            <div class="sensor-top">
+                <div class="sensor-icon-wrap">🏢</div>
+                <div class="badge badge-offline" id="badge-main_building"><div class="badge-dot"></div><span id="status-text-main_building">Offline</span></div>
+            </div>
+            <div class="sensor-name">Main Building</div>
+            <div class="metrics-grid">
+                <div><div class="metric-label">Pressure</div><div class="metric-val" id="pressure-main_building">--<span class="metric-unit">PSI</span></div></div>
+                <div><div class="metric-label">Flow Rate</div><div class="metric-val" id="flow-main_building">--<span class="metric-unit">LPM</span></div></div>
+                <div><div class="metric-label">Gate Position</div><div class="metric-val" id="valve-main_building">--<span class="metric-unit">%</span></div></div>
+                <div><div class="metric-label">AI Status</div><div class="metric-val" style="font-size:0.85rem" id="ai-status-main_building">—</div></div>
+            </div>
+            <div class="pressure-track"><div class="pressure-fill" id="pbar-main_building" style="width:0%"></div></div>
+        </div>
+
+        <div class="sensor-card" id="card-pool_spa">
+            <div class="sensor-top">
+                <div class="sensor-icon-wrap">🏊</div>
+                <div class="badge badge-offline" id="badge-pool_spa"><div class="badge-dot"></div><span id="status-text-pool_spa">Offline</span></div>
+            </div>
+            <div class="sensor-name">Pool & Spa</div>
+            <div class="metrics-grid">
+                <div><div class="metric-label">Pressure</div><div class="metric-val" id="pressure-pool_spa">--<span class="metric-unit">PSI</span></div></div>
+                <div><div class="metric-label">Flow Rate</div><div class="metric-val" id="flow-pool_spa">--<span class="metric-unit">LPM</span></div></div>
+                <div><div class="metric-label">Gate Position</div><div class="metric-val" id="valve-pool_spa">--<span class="metric-unit">%</span></div></div>
+                <div><div class="metric-label">AI Status</div><div class="metric-val" style="font-size:0.85rem" id="ai-status-pool_spa">—</div></div>
+            </div>
+            <div class="pressure-track"><div class="pressure-fill" id="pbar-pool_spa" style="width:0%"></div></div>
+        </div>
+
+        <div class="sensor-card" id="card-kitchen">
+            <div class="sensor-top">
+                <div class="sensor-icon-wrap">🍽️</div>
+                <div class="badge badge-offline" id="badge-kitchen"><div class="badge-dot"></div><span id="status-text-kitchen">Offline</span></div>
+            </div>
+            <div class="sensor-name">Kitchen & Laundry</div>
+            <div class="metrics-grid">
+                <div><div class="metric-label">Pressure</div><div class="metric-val" id="pressure-kitchen">--<span class="metric-unit">PSI</span></div></div>
+                <div><div class="metric-label">Flow Rate</div><div class="metric-val" id="flow-kitchen">--<span class="metric-unit">LPM</span></div></div>
+                <div><div class="metric-label">Gate Position</div><div class="metric-val" id="valve-kitchen">--<span class="metric-unit">%</span></div></div>
+                <div><div class="metric-label">AI Status</div><div class="metric-val" style="font-size:0.85rem" id="ai-status-kitchen">—</div></div>
+            </div>
+            <div class="pressure-track"><div class="pressure-fill" id="pbar-kitchen" style="width:0%"></div></div>
+        </div>
+    </div>
+
+    <div class="bottom-grid">
+
+        <div class="panel">
+            <div class="panel-title"><div class="panel-title-dot"></div>Security Status</div>
+
+            <div class="sec-normal" id="sec-normal">
+                <div class="sec-icon">🔒</div>
+                <div><div class="sec-title">All Systems Secure</div><div class="sec-desc">Rules + AI monitoring active</div></div>
+            </div>
+
+            <div class="attack-box" id="attack-box">
+                <div class="alert-badge badge-red">⚠ Attack Detected</div>
+                <div class="alert-row"><span>Type</span><strong id="a-type">—</strong></div>
+                <div class="alert-row"><span>Source</span><strong id="a-source">—</strong></div>
+                <div class="alert-row"><span>Target</span><strong>Water System</strong></div>
+                <div class="blocked-badge blocked-red">✓ Blocked by Rule-Based Defense</div>
+            </div>
+
+            <div class="ai-box" id="ai-box">
+                <div class="alert-badge badge-orange">🤖 AI Anomaly</div>
+                <div class="alert-row"><span>Source</span><strong id="ai-source">—</strong></div>
+                <div class="alert-row"><span>Detail</span><strong id="ai-detail">—</strong></div>
+                <div class="alert-row"><span>Score</span><strong id="ai-score">—</strong></div>
+                <div class="blocked-badge blocked-orange">⚠ Flagged for Review (passed rule checks)</div>
+            </div>
+
+            <div class="defense-tags">
+                <div class="tag">HMAC-SHA256</div>
+                <div class="tag">Timestamp ≤ 30s</div>
+                <div class="tag">Sequence Counter</div>
+                <div class="tag">mTLS</div>
+                <div class="tag-ai">Isolation Forest</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title"><div class="panel-title-dot"></div>Security Event Log</div>
+            <div class="event-log" id="event-log">
+                <div class="event-row">
+                    <div class="event-dot info"></div>
+                    <div class="event-time">--:--:--</div>
+                    <div class="event-msg">Waiting for events...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title"><div class="panel-title-dot"></div>System Information</div>
+            <div class="sys-rows">
+                <div class="sys-row"><span class="sys-row-label">Broker</span><span class="sys-badge red">localhost:8884</span></div>
+                <div class="sys-row"><span class="sys-row-label">Protocol</span><span class="sys-badge red">MQTT + mTLS</span></div>
+                <div class="sys-row"><span class="sys-row-label">Rule Defense</span><span class="sys-badge green">HMAC + TS + SEQ</span></div>
+                <div class="sys-row"><span class="sys-row-label">AI Model</span><span class="sys-badge orange">Isolation Forest</span></div>
+                <div class="sys-row"><span class="sys-row-label">Contamination</span><span class="sys-row-val">5%</span></div>
+                <div class="sys-row"><span class="sys-row-label">Last Check</span><span class="sys-row-val" id="last-check">--:--:--</span></div>
+                <div class="sys-row"><span class="sys-row-label">Powered by</span><span class="sys-badge red">Hydroficient</span></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const state = { valid:0, rejected:0, ai_anomalies:0, total:0, zones:{main_building:false, pool_spa:false, kitchen:false} };
+    let ws, reconnects=0;
+
+    function tick(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US',{hour12:false}); }
+    tick(); setInterval(tick, 1000);
+
+    function connect(){
+        addEvent('info','Connecting to GbemiShield AI...');
+        try{ ws = new WebSocket('ws://localhost:8765'); }catch(e){ return; }
+
+        ws.onopen = () => { reconnects=0; addEvent('valid','Connected — Rules + AI active'); };
+        ws.onmessage = e => { try{ handle(JSON.parse(e.data)); }catch(_){} };
+        ws.onclose = () => {
+            if(reconnects<10){ reconnects++; addEvent('info',`Reconnecting (${reconnects}/10)...`); setTimeout(connect,2000); }
+        };
+    }
+
+    function handle(msg){
+        if(msg.type==='valid_message') onValid(msg.data);
+        if(msg.type==='attack'||msg.type==='rejected_message') onAttack(msg.data);
+        if(msg.type==='ai_anomaly') onAiAnomaly(msg.data);
+        if(msg.type==='stats_update') onStats(msg.data);
+    }
+
+    function onValid(d){
+        state.valid++; state.total++;
+        let zone = d.zone||'main_building';
+        if(!d.zone&&d.topic){ if(d.topic.includes('002')) zone='pool_spa'; else if(d.topic.includes('003')) zone='kitchen'; }
+        state.zones[zone]=true;
+        updateCard(zone,d,false);
+        updateCounts();
+        const names={main_building:'Main Building',pool_spa:'Pool & Spa',kitchen:'Kitchen & Laundry'};
+        addEvent('valid',`${names[zone]}: ${d.pressure_psi||'--'} PSI · ${d.flow_rate_gpm||d.flow_rate_lpm||'--'} LPM`);
+        document.getElementById('last-check').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});
+    }
+
+    function onAttack(d){
+        state.rejected++; state.total++;
+        document.getElementById('a-type').textContent=d.attack_type||'Unknown';
+        document.getElementById('a-source').textContent=d.source||'unknown';
+        const box=document.getElementById('attack-box'), norm=document.getElementById('sec-normal');
+        box.classList.add('show'); norm.style.display='none';
+        setTimeout(()=>{ box.classList.remove('show'); norm.style.display='flex'; },5000);
+        const c=document.getElementById('card-main_building');
+        if(c){ c.classList.add('attack-flash'); setTimeout(()=>c.classList.remove('attack-flash'),800); }
+        updateCounts();
+        addEvent('attack',`BLOCKED: ${d.attack_type||'Unknown'} from ${d.source||'unknown'}`);
+        document.getElementById('last-check').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});
+    }
+
+    function onAiAnomaly(d){
+        state.ai_anomalies++; state.total++;
+        document.getElementById('ai-source').textContent=d.device_id||'unknown';
+        document.getElementById('ai-detail').textContent=d.anomaly_description||'Unusual pattern';
+        document.getElementById('ai-score').textContent=d.ai_score||'--';
+        const box=document.getElementById('ai-box'), norm=document.getElementById('sec-normal');
+        box.classList.add('show'); norm.style.display='none';
+        setTimeout(()=>{ box.classList.remove('show'); norm.style.display='flex'; },6000);
+        let zone=d.zone||'main_building';
+        state.zones[zone]=true;
+        updateCard(zone,d,true);
+        const c=document.getElementById('card-'+zone);
+        if(c){ c.classList.add('ai-flash'); setTimeout(()=>c.classList.remove('ai-flash'),1000); }
+        updateCounts();
+        addEvent('ai-anomaly',`AI ANOMALY: ${d.anomaly_description||'Unusual pattern'} from ${d.device_id||'unknown'} (score: ${d.ai_score||'--'})`);
+        document.getElementById('last-check').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});
+    }
+
+    function onStats(d){
+        state.valid=d.valid||0; state.rejected=d.rejected||0;
+        state.ai_anomalies=d.ai_anomalies||0; state.total=d.total||0;
+        updateCounts();
+    }
+
+    function updateCard(zone,d,isAi){
+        const badge=document.getElementById('badge-'+zone), txt=document.getElementById('status-text-'+zone), card=document.getElementById('card-'+zone);
+        if(badge){ badge.className='badge badge-online'; }
+        if(txt){ txt.textContent='Online'; }
+        if(card){ card.classList.add('online'); }
+
+        setMetric('pressure-'+zone,(d.pressure_psi||0).toFixed(1),'PSI',isAi);
+        setMetric('flow-'+zone,(d.flow_rate_gpm||d.flow_rate_lpm||0).toFixed(1),'LPM',isAi);
+        setMetric('valve-'+zone,(d.valve_position||0).toFixed(1),'%',isAi);
+
+        const ais=document.getElementById('ai-status-'+zone);
+        if(ais){ ais.textContent=isAi?'⚠ Anomaly':'✓ Normal'; ais.style.color=isAi?'var(--orange)':'var(--green)'; }
+
+        const bar=document.getElementById('pbar-'+zone);
+        if(bar){ const p=Math.min(((d.pressure_psi||0)/80)*100,100); bar.style.width=p+'%'; bar.classList.toggle('warn',(d.pressure_psi||0)>65); }
+    }
+
+    function setMetric(id,val,unit,isAi){
+        const el=document.getElementById(id);
+        if(!el) return;
+        el.innerHTML=val+`<span class="metric-unit">${unit}</span>`;
+        el.classList.add(isAi?'ai-flash-val':'flash');
+        setTimeout(()=>el.classList.remove(isAi?'ai-flash-val':'flash'),600);
+    }
+
+    function updateCounts(){
+        document.getElementById('stat-valid').textContent=state.valid;
+        document.getElementById('stat-rejected').textContent=state.rejected;
+        document.getElementById('stat-ai').textContent=state.ai_anomalies;
+        document.getElementById('stat-total').textContent=state.total;
+    }
+
+    function addEvent(type,msg){
+        const log=document.getElementById('event-log');
+        const time=new Date().toLocaleTimeString('en-US',{hour12:false});
+        if(log.children.length===1&&log.firstChild.querySelector&&log.firstChild.querySelector('.event-msg')?.textContent==='Waiting for events...') log.innerHTML='';
+        const row=document.createElement('div');
+        row.className='event-row';
+        const msgClass=type==='attack'?'attack-msg':type==='valid'?'valid-msg':type==='ai-anomaly'?'ai-anomaly-msg':'';
+        row.innerHTML=`<div class="event-dot ${type}"></div><div class="event-time">${time}</div><div class="event-msg ${msgClass}">${msg}</div>`;
+        log.insertBefore(row,log.firstChild);
+        while(log.children.length>60) log.removeChild(log.lastChild);
+    }
+
+    connect();
+</script>
+</body>
+</html>
