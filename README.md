@@ -106,6 +106,7 @@ grand-marina-iot-security/
 ├── experiments/                    # Research & results
 │   ├── experiment_runner.py        # TLS experiments (baseline, expired cert, wrong CA)
 │   ├── defense_tester.py           # Replay defense trials + chart generation
+│   ├── anomaly_detection_lab.ipynb # Isolation Forest training notebook (Colab)
 │   ├── experiment_results.json     # Full results (60 trials)
 │   ├── defense_comparison.png      # Replay attack defense chart
 │   └── captured_messages.json      # Sample captured MQTT messages
@@ -125,8 +126,9 @@ grand-marina-iot-security/
 ├── models/
 │   └── anomaly_model.joblib        # Trained Isolation Forest model
 │
-├── reports/
-│   └── Externship_Final_Capstone.pptx
+├── reports/                        # Written deliverables, in project order (see Reports below)
+│   ├── 01_Asset_CIA_Analysis.pdf … 12_Anomaly_Detection_Results.pdf
+│   └── 13_Final_Capstone.pptx
 │
 └── requirements.txt
 ```
@@ -221,7 +223,7 @@ python src/mtls_benchmark.py --mode latency --count 50
 
 ## STRIDE Threat Model
 
-Full analysis in the capstone deck: `reports/Externship_Final_Capstone.pptx`.
+Full analysis in [`reports/02_Threat_Model_STRIDE.pdf`](reports/02_Threat_Model_STRIDE.pdf).
 
 | Threat | Vector | Mitigation |
 |---|---|---|
@@ -231,6 +233,30 @@ Full analysis in the capstone deck: `reports/Externship_Final_Capstone.pptx`.
 | **Information Disclosure** | Plaintext MQTT interception | TLS encryption on wire |
 | **Denial of Service** | Replay flooding | Sequence counter + timestamp |
 | **Elevation of Privilege** | Unauthorized broker access | Certificate-based authentication |
+
+---
+
+## Reports
+
+Every written deliverable from the externship, in the order the work was done:
+
+| # | Report | What it covers |
+|---|---|---|
+| 01 | [Asset CIA Analysis](reports/01_Asset_CIA_Analysis.pdf) | Confidentiality / integrity / availability scores (1–5) for each Grand Marina asset |
+| 02 | [Threat Model (STRIDE)](reports/02_Threat_Model_STRIDE.pdf) | Full STRIDE threat analysis of the water-management system |
+| 03 | [Vulnerability Analysis](reports/03_Vulnerability_Analysis.docx) | Weaknesses found in the unencrypted MQTT pipeline, with recommendations |
+| 04 | [TLS Experiment Results](reports/04_TLS_Experiment_Results.pdf) | Eavesdropping, expired-cert and wrong-CA experiments with TLS |
+| 05 | [Security Report](reports/05_Security_Report.docx) | Security assessment for the hotel's GM, recommending encryption |
+| 06 | [Identify the Gap](reports/06_Identify_the_Gap.pdf) | Why the one-way TLS setup can't verify which device is talking |
+| 07 | [mTLS Deliverable](reports/07_mTLS_Deliverable.pdf) | Screenshots: certificate generation, mTLS broker/publisher/subscriber, rogue-device rejection |
+| 08 | [mTLS Benchmark Report](reports/08_mTLS_Benchmark_Report.pdf) | TLS vs mTLS connection time and latency (+2.5 ms / +11.5% to connect) |
+| 09 | [Device Provisioning Policy](reports/09_Device_Provisioning_Policy.docx) | How device certificates are issued, stored and revoked |
+| 10 | [Replay Attack Report](reports/10_Replay_Attack_Report.docx) | Replay attack defense report for the hotel's GM (HMAC + timestamp + sequence) |
+| 11 | [Defense Experiment Results](reports/11_Defense_Experiment_Results.pdf) | Hypotheses vs results for the replay defense experiments |
+| 12 | [Anomaly Detection Results](reports/12_Anomaly_Detection_Results.pdf) | Isolation Forest results: precision 0.74, recall 0.78, F1 0.76 |
+| 13 | [Final Capstone](reports/13_Final_Capstone.pptx) | Final presentation of the full GbemiShield pipeline |
+
+The model training notebook is in [`experiments/anomaly_detection_lab.ipynb`](experiments/anomaly_detection_lab.ipynb).
 
 ---
 
@@ -258,4 +284,5 @@ If you want to understand what was built, start here:
 2. `attacks/replay_attacker.py` — how replay attacks work in practice
 3. `experiments/experiment_results.json` — the raw data behind the chart
 4. `dashboard/dashboard_server_ai.py` — how the live AI dashboard works
-5. `reports/Externship_Final_Capstone.pptx` — the capstone presentation
+5. [`reports/05_Security_Report.docx`](reports/05_Security_Report.docx) — the Security Improvement Report
+6. [`reports/13_Final_Capstone.pptx`](reports/13_Final_Capstone.pptx) — the final capstone presentation
