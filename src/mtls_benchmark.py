@@ -25,6 +25,11 @@ import time
 from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
+import os
+
+# Repo root (this file lives one level down, e.g. src/ or attacks/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CERTS_DIR = os.path.join(ROOT_DIR, "certs2")
 
 # =============================================================================
 # Handle paho-mqtt 2.0+ API change
@@ -42,9 +47,9 @@ TLS_PORT = 8883       # One-way TLS broker
 MTLS_PORT = 8884      # Mutual TLS broker
 
 # Certificate paths
-CA_CERT = "certs2/ca.pem"
-CLIENT_CERT = "certs2/device-001.pem"
-CLIENT_KEY = "certs2/device-001-key.pem"
+CA_CERT = os.path.join(CERTS_DIR, "ca.pem")
+CLIENT_CERT = os.path.join(CERTS_DIR, "device-001.pem")
+CLIENT_KEY = os.path.join(CERTS_DIR, "device-001-key.pem")
 
 TOPIC = "hydroficient/benchmark/test"
 

@@ -1,4 +1,10 @@
 __pycache__/
 *.pyc
+
+# Generated certificates and private keys — never commit these
 certs2/
+*.pem
+
+# Model files, except the trained model shipped with the repo
 *.joblib
+!models/anomaly_model.joblib

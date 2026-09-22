@@ -12,6 +12,9 @@ import ipaddress
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+# Certificates are written to certs2/ at the repo root
+CERTS_DIR = Path(__file__).resolve().parent.parent / "certs2"
+
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
@@ -138,7 +141,7 @@ def generate_server_certificate(ca_key, ca_cert):
     return server_key, server_cert
 
 
-def save_certificates(ca_cert, server_cert, server_key, output_dir="certs"):
+def save_certificates(ca_cert, server_cert, server_key, output_dir=CERTS_DIR):
     """Save all certificates and keys to files"""
     # Create output directory
     output_path = Path(output_dir)
@@ -209,7 +212,7 @@ def main():
     server_key, server_cert = generate_server_certificate(ca_key, ca_cert)
 
     # Step 3: Save all files
-    print_step(3, 3, "Saving certificates to certs/ folder...")
+    print_step(3, 3, "Saving certificates to certs2/ folder...")
     ca_path, server_path, key_path = save_certificates(ca_cert, server_cert, server_key)
 
     # Verify

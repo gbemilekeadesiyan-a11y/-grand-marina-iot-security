@@ -27,6 +27,10 @@ import os
 import copy
 from datetime import datetime, timezone
 
+# Repo root (this file lives one level down, e.g. src/ or attacks/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CERTS_DIR = os.path.join(ROOT_DIR, "certs2")
+
 # Fix Windows console encoding for Unicode / ANSI colors
 if sys.platform == "win32":
     os.system("")  # enable ANSI escape codes on Windows
@@ -62,9 +66,9 @@ BROKER_HOST = "localhost"
 BROKER_PORT = 8884
 
 # mTLS certificates (attacker has valid credentials — insider threat)
-CA_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\ca.pem"
-CLIENT_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-001.pem"
-CLIENT_KEY = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-001-key.pem"
+CA_CERT = os.path.join(CERTS_DIR, "ca.pem")
+CLIENT_CERT = os.path.join(CERTS_DIR, "device-001.pem")
+CLIENT_KEY = os.path.join(CERTS_DIR, "device-001-key.pem")
 
 TARGET_TOPIC = "hydroficient/grandmarina/device-001/sensors"
 

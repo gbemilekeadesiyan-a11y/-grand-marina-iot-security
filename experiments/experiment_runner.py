@@ -25,6 +25,9 @@ import statistics
 import ipaddress
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+# Certificates live in certs2/ at the repo root
+CERTS_DIR = Path(__file__).resolve().parent.parent / "certs2"
 from typing import List, Optional
 
 import paho.mqtt.client as mqtt
@@ -44,7 +47,7 @@ except ImportError:
 class ExperimentRunner:
     """Runs various TLS experiments"""
 
-    def __init__(self, tls_enabled: bool = True, ca_path: str = "certs/ca.pem"):
+    def __init__(self, tls_enabled: bool = True, ca_path: str = str(CERTS_DIR / "ca.pem")):
         self.tls_enabled = tls_enabled
         self.ca_path = ca_path
         self.broker_host = "localhost"
@@ -351,8 +354,8 @@ def generate_expired_cert():
     )
 
     # Save
-    Path("certs").mkdir(exist_ok=True)
-    with open("certs/expired-server.pem", "wb") as f:
+    CERTS_DIR.mkdir(exist_ok=True)
+    with open(str(CERTS_DIR / "expired-server.pem"), "wb") as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
     print("Saved: certs/expired-server.pem")
@@ -389,8 +392,8 @@ def generate_wrong_ca():
         .sign(key, hashes.SHA256())
     )
 
-    Path("certs").mkdir(exist_ok=True)
-    with open("certs/wrong-ca.pem", "wb") as f:
+    CERTS_DIR.mkdir(exist_ok=True)
+    with open(str(CERTS_DIR / "wrong-ca.pem"), "wb") as f:
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
     print("Saved: certs/wrong-ca.pem")
@@ -430,7 +433,7 @@ Examples:
                         help="Duration in seconds for stress test")
     parser.add_argument("--no-ca", action="store_true",
                         help="Don't use CA certificate (for Experiment 2)")
-    parser.add_argument("--ca", default="certs/ca.pem",
+    parser.add_argument("--ca", default=str(CERTS_DIR / "ca.pem"),
                         help="Path to CA certificate")
 
     args = parser.parse_args()
@@ -461,7 +464,7 @@ Examples:
 
     elif args.mode == "test-wrong-ca":
         print("Testing connection with wrong CA...")
-        runner = ExperimentRunner(tls_enabled=True, ca_path="certs/wrong-ca.pem")
+        runner = ExperimentRunner(tls_enabled=True, ca_path=str(CERTS_DIR / "wrong-ca.pem"))
         runner.run_connect_test()
 
     elif args.mode == "generate-expired-cert":

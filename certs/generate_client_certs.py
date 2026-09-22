@@ -17,7 +17,8 @@ from datetime import datetime, timedelta, timezone
 import os
 
 # Configuration
-CERTS_DIR = "certs 2"
+# Certificates are written to certs2/ at the repo root
+CERTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "certs2")
 CA_CERT_FILE = os.path.join(CERTS_DIR, "ca.pem")
 CA_KEY_FILE = os.path.join(CERTS_DIR, "ca-key.pem")
 SERVER_CERT_FILE = os.path.join(CERTS_DIR, "server.pem")

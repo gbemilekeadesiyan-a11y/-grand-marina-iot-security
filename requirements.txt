@@ -1,0 +1,7 @@
+paho-mqtt>=2.0
+cryptography
+websockets
+scikit-learn
+joblib
+numpy
+matplotlib
