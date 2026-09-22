@@ -14,6 +14,11 @@ import json
 import time
 import random
 from datetime import datetime, timezone
+import os
+
+# Repo root (this file lives one level down, e.g. src/ or attacks/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CERTS_DIR = os.path.join(ROOT_DIR, "certs2")
 
 # Handle paho-mqtt 2.0+ API change
 try:
@@ -31,9 +36,9 @@ BROKER_PORT = 8884
 DEVICE_ID = "001"  # Change this for each device
 
 # Certificate files
-CA_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\ca.pem"
-CLIENT_CERT = f"C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-{DEVICE_ID}.pem"   # ADD THIS FOR mTLS
-CLIENT_KEY = f"C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-{DEVICE_ID}-key.pem"  # ADD THIS FOR mTLS
+CA_CERT = os.path.join(CERTS_DIR, "ca.pem")
+CLIENT_CERT = os.path.join(CERTS_DIR, f"device-{DEVICE_ID}.pem")   # ADD THIS FOR mTLS
+CLIENT_KEY = os.path.join(CERTS_DIR, f"device-{DEVICE_ID}-key.pem")  # ADD THIS FOR mTLS
 
 # MQTT settings
 TOPIC = f"hydroficient/grandmarina/device-{DEVICE_ID}/sensors"

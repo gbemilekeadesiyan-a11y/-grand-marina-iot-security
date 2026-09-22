@@ -21,6 +21,11 @@ import hmac
 import hashlib
 from datetime import datetime, timezone
 import argparse
+import os
+
+# Repo root (this file lives one level down, e.g. src/ or attacks/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CERTS_DIR = os.path.join(ROOT_DIR, "certs2")
 
 # Add this right after your imports, before Configuration section
 
@@ -43,9 +48,9 @@ BROKER_PORT = 8884
 DEVICE_ID = args.device
 
 # Certificate files
-CA_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\ca.pem"
-CLIENT_CERT = f"C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-{DEVICE_ID}.pem"
-CLIENT_KEY = f"C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-{DEVICE_ID}-key.pem"
+CA_CERT = os.path.join(CERTS_DIR, "ca.pem")
+CLIENT_CERT = os.path.join(CERTS_DIR, f"device-{DEVICE_ID}.pem")
+CLIENT_KEY = os.path.join(CERTS_DIR, f"device-{DEVICE_ID}-key.pem")
 
 # MQTT settings
 TOPIC = f"hydroficient/grandmarina/device-{DEVICE_ID}/sensors"

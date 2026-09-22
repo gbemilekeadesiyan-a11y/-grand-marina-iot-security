@@ -31,6 +31,10 @@ import copy
 import random
 from datetime import datetime, timezone
 
+# Repo root (this file lives one level down, e.g. src/ or attacks/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CERTS_DIR = os.path.join(ROOT_DIR, "certs2")
+
 # Handle paho-mqtt 2.0+ API change
 try:
     MQTT_CLIENT_ARGS = {"callback_api_version": mqtt.CallbackAPIVersion.VERSION1}
@@ -43,13 +47,13 @@ except AttributeError:
 BROKER_HOST = "localhost"
 BROKER_PORT = 8884
 
-CA_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\ca.pem"
-CLIENT_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-001.pem"
-CLIENT_KEY = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-001-key.pem"
+CA_CERT = os.path.join(CERTS_DIR, "ca.pem")
+CLIENT_CERT = os.path.join(CERTS_DIR, "device-001.pem")
+CLIENT_KEY = os.path.join(CERTS_DIR, "device-001-key.pem")
 
 # Capture settings
 TOPIC = "hydroficient/grandmarina/#"
-CAPTURE_FILE = "captured_messages.json"
+CAPTURE_FILE = os.path.join(ROOT_DIR, "experiments", "captured_messages.json")
 
 
 # =============================================================================

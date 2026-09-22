@@ -78,58 +78,62 @@ Rule-based defenses only catch what you already know to look for. The Isolation 
 ## Repo Structure
 
 ```
-GbemiShield/
+grand-marina-iot-security/
 │
-├── src/                          # Core pipeline
-│   ├── publisher_mtls.py         # Device sensor publisher (mTLS)
-│   ├── publisher_defended.py     # Publisher with HMAC + sequence counter
-│   ├── subscriber_tls.py         # Basic TLS subscriber
-│   ├── subscriber_mtls.py        # Mutual TLS subscriber
-│   ├── subscriber_defended.py    # Subscriber with 3-layer replay defense
-│   └── subscriber_dashboard_ai.py # Full pipeline with AI + live dashboard
+├── src/                            # Core pipeline (publishers & subscribers)
+│   ├── publisher_tls.py            # Phase 2: one-way TLS publisher (port 8883)
+│   ├── publisher_mtls.py           # Phase 3: mutual TLS publisher (port 8884)
+│   ├── publisher_defended.py       # Phase 4: HMAC + timestamp + sequence counter
+│   ├── subscriber_tls.py           # Phase 2: one-way TLS subscriber
+│   ├── subscriber_mtls.py          # Phase 3: mutual TLS subscriber
+│   ├── subscriber_defended.py      # Phase 4: 3-layer replay defense
+│   ├── subscriber_dashboard.py     # Defended subscriber + rule-based dashboard
+│   ├── subscriber_dashboard_ai.py  # Defended subscriber + AI dashboard (full pipeline)
+│   └── mtls_benchmark.py           # TLS vs mTLS overhead benchmark
 │
-├── dashboard/                    # GbemiShield live dashboard
-│   ├── dashboard.html            # Rule-based attack dashboard
-│   ├── dashboard_ai.html         # AI-enhanced dashboard
-│   ├── dashboard_server.py       # WebSocket + HTTP server
-│   └── dashboard_server_ai.py    # AI-extended dashboard server
+├── dashboard/                      # GbemiShield live dashboard
+│   ├── dashboard.html              # Rule-based attack dashboard
+│   ├── dashboard_ai.html           # AI-enhanced dashboard
+│   ├── dashboard_server.py         # HTTP (8000) + WebSocket (8765) server
+│   └── dashboard_server_ai.py      # AI-extended dashboard server
 │
-├── attacks/                      # Attack simulation tools
-│   ├── replay_attacker.py        # Replay attack (capture/replay/delayed/modified)
-│   ├── attack_simulator.py       # Three-phase theatrical attack demo
-│   ├── identity_tester.py        # Identity attack suite (no cert/wrong CA/expired)
-│   └── key_test.py               # Rogue device connection test
+├── attacks/                        # Attack simulation tools
+│   ├── replay_attacker.py          # Replay attack (capture/replay/delayed/modified)
+│   ├── attack_simulator.py         # Three-phase theatrical attack demo
+│   ├── identity_tester.py          # Identity attacks (no cert / wrong CA / expired)
+│   └── key_test.py                 # Rogue device connection test
 │
-├── experiments/                  # Research & results
-│   ├── experiment_runner.py      # Automated defense comparison runner
-│   ├── defense_tester.py         # Manual defense testing tool
-│   ├── experiment_results.json   # Full results (60 trials)
-│   ├── defense_comparison.png    # Replay attack defense chart
-│   └── captured_messages.json   # Sample captured MQTT messages
+├── experiments/                    # Research & results
+│   ├── experiment_runner.py        # TLS experiments (baseline, expired cert, wrong CA)
+│   ├── defense_tester.py           # Replay defense trials + chart generation
+│   ├── experiment_results.json     # Full results (60 trials)
+│   ├── defense_comparison.png      # Replay attack defense chart
+│   └── captured_messages.json      # Sample captured MQTT messages
 │
-├── certs/                        # Certificate infrastructure
-│   ├── generate_certs.py         # CA + server cert generation
-│   └── generate_client_certs.py  # Per-device cert generation (mTLS)
+├── certs/                          # Certificate generation scripts
+│   ├── generate_client_certs.py    # CA + server + per-device certs (use this one)
+│   └── generate_certs.py           # Phase 2 only: CA + server cert (no CA key)
 │
-├── config/                       # Mosquitto broker configs
-│   ├── mosquitto_insecure.conf   # Phase 1: No security
-│   ├── mosquitto_tls.conf        # Phase 2: One-way TLS
-│   ├── mosquitto_oneway.conf     # Phase 3: One-way TLS variant
-│   └── mosquitto_mtls.conf       # Phase 4: Mutual TLS
+├── certs2/                         # Generated certificates (git-ignored, never commit)
 │
-├── models/                       # AI models
-│   └── anomaly_model.joblib      # Trained Isolation Forest model
+├── config/                         # Mosquitto broker configs
+│   ├── mosquitto_insecure.conf     # Phase 1: no security (port 18883)
+│   ├── mosquitto_tls.conf          # Phase 2: TLS (port 8883)
+│   ├── mosquitto_oneway.conf       # Phase 2: one-way TLS, minimal (port 8883)
+│   └── mosquitto_mtls.conf         # Phase 3+: mutual TLS (port 8884)
 │
-├── reports/                      # Deliverables
-│   ├── grand_marina_security_report.docx
-│   ├── vulnerability_analysis.docx
-│   ├── Grand_Marina_Threat_Model.docx
+├── models/
+│   └── anomaly_model.joblib        # Trained Isolation Forest model
+│
+├── reports/
 │   └── Externship_Final_Capstone.pptx
 │
-└── screenshots/
-    ├── gbemishield_dashboard.png  # Live dashboard screenshot
-    └── defense_comparison.png     # Experiment results chart
+└── requirements.txt
 ```
+
+> **Run every command from the repo root.** Scripts find `certs2/`, `models/` and the
+> dashboard by their own location, but Mosquitto resolves the `certs2/...` paths in
+> `config/*.conf` relative to the folder you start it from.
 
 ---
 
@@ -137,39 +141,51 @@ GbemiShield/
 
 ### Prerequisites
 ```bash
-pip install paho-mqtt cryptography scikit-learn joblib websockets
+pip install -r requirements.txt
 ```
 
-Also install [Mosquitto](https://mosquitto.org/download/) MQTT broker.
+Also install the [Mosquitto](https://mosquitto.org/download/) MQTT broker.
 
-### 1. Generate Certificates
+### 1. Generate Certificates (first time only)
 ```bash
-python certs/generate_certs.py
 python certs/generate_client_certs.py
 ```
+This creates the CA, the broker certificate and device certificates `001`–`003` in `certs2/`.
+(If you already have a `certs2/` folder from before, just copy it into the repo root instead.)
 
 ### 2. Start the Broker
 ```bash
-# Insecure (Phase 1)
-mosquitto -c config/mosquitto_insecure.conf -v
-
-# Mutual TLS (Phase 4 — recommended)
+# Mutual TLS (recommended — what the full pipeline uses)
 mosquitto -c config/mosquitto_mtls.conf -v
+
+# Insecure baseline (Phase 1)
+mosquitto -c config/mosquitto_insecure.conf -v
 ```
 
 ### 3. Run the Full Pipeline
 ```bash
-# Terminal 1 — Start the AI dashboard subscriber
+# Terminal 1 — AI dashboard subscriber (opens http://localhost:8000 automatically)
 python src/subscriber_dashboard_ai.py
 
-# Terminal 2 — Start a defended publisher
+# Terminal 2 — defended publishers, one per device zone
 python src/publisher_defended.py --device 001
+python src/publisher_defended.py --device 002
+python src/publisher_defended.py --device 003
 
-# Terminal 3 — Run an attack simulation
+# Terminal 3 — run an attack simulation
 python attacks/attack_simulator.py
 ```
 
-Then open `http://localhost:8000` to see GbemiShield live.
+Then open **http://localhost:8000** to see GbemiShield live.
+
+### Just want to see the dashboard?
+The HTML needs its Python server (it connects to a WebSocket on port 8765), so double-clicking
+the `.html` file shows an empty "offline" page. To open the dashboard UI without the broker:
+```bash
+python dashboard/dashboard_server_ai.py   # AI dashboard
+python dashboard/dashboard_server.py      # rule-based dashboard
+```
+Both serve on http://localhost:8000. Tiles stay empty until a subscriber pushes events.
 
 ---
 
@@ -205,7 +221,7 @@ python src/mtls_benchmark.py --mode latency --count 50
 
 ## STRIDE Threat Model
 
-Full analysis in `reports/Grand_Marina_Threat_Model.docx`.
+Full analysis in the capstone deck: `reports/Externship_Final_Capstone.pptx`.
 
 | Threat | Vector | Mitigation |
 |---|---|---|
@@ -242,4 +258,4 @@ If you want to understand what was built, start here:
 2. `attacks/replay_attacker.py` — how replay attacks work in practice
 3. `experiments/experiment_results.json` — the raw data behind the chart
 4. `dashboard/dashboard_server_ai.py` — how the live AI dashboard works
-5. `reports/grand_marina_security_report.docx` — the full deliverable
+5. `reports/Externship_Final_Capstone.pptx` — the capstone presentation

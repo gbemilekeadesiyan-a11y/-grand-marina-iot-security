@@ -1,18 +1,21 @@
 """
-subscriber_dashboard_ai.py - MQTT Subscriber with Replay Defenses + AI Anomaly Detection
+subscriber_dashboard.py - MQTT Subscriber with Replay Defenses + Live Dashboard
 
-Extends subscriber_dashboard.py (Project 7) with an Isolation Forest model
-that scores every accepted message for anomalies. Messages that pass all
-rule-based checks but trigger the AI model get an orange "FLAGGED" warning
-on the dashboard instead of a red "BLOCKED" or green "ACCEPTED."
+Combines subscriber_defended.py (Project 6) with the dashboard server so
+that every accepted and rejected message appears in real time on the web
+dashboard at http://localhost:8000.
 
-Architecture:
-    Incoming Message → Rule Checks → FAIL → Red "BLOCKED"
-                                   → PASS → AI Score → ANOMALY → Orange "FLAGGED"
-                                                     → NORMAL  → Green "ACCEPTED"
+Validation checks (same as Project 6):
+  1. HMAC verification (was the message tampered with?)
+  2. Timestamp freshness (is the message recent?)
+  3. Sequence counter (have we seen this message before?)
+
+New in Project 7:
+  - Starts the dashboard server on launch
+  - Pushes every event to the browser via WebSocket
 
 Usage:
-    python subscriber_dashboard_ai.py
+    python subscriber_dashboard.py
 """
 
 import paho.mqtt.client as mqtt
@@ -22,17 +25,18 @@ import hmac
 import hashlib
 import time
 import threading
-import numpy as np
 from datetime import datetime, timezone
 
-try:
-    import joblib
-except ImportError:
-    print("[ERROR] joblib not installed. Run: pip install joblib")
-    exit(1)
+import os
+import sys
 
-# Import the dashboard server
-from dashboard_server_ai import DashboardServer
+# Repo root (this file lives one level down, e.g. src/ or attacks/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CERTS_DIR = os.path.join(ROOT_DIR, "certs2")
+
+# Import the dashboard server (lives in dashboard/)
+sys.path.insert(0, os.path.join(ROOT_DIR, "dashboard"))
+from dashboard_server import DashboardServer  # noqa: E402
 
 # Handle paho-mqtt 2.0+ API change
 try:
@@ -45,15 +49,18 @@ except AttributeError:
 # =============================================================================
 BROKER_HOST = "localhost"
 BROKER_PORT = 8884
-SUBSCRIBER_ID = "dashboard-ai"
+SUBSCRIBER_ID = "dashboard"
+
 
 # Certificate files (same as Project 5)
-CA_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\ca.pem"
-CLIENT_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-001.pem"
-CLIENT_KEY = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-001-key.pem"
+CA_CERT = os.path.join(CERTS_DIR, "ca.pem")
+CLIENT_CERT = os.path.join(CERTS_DIR, "device-001.pem")
+CLIENT_KEY = os.path.join(CERTS_DIR, "device-001-key.pem")
+
+
 # Subscribe to all Grand Marina devices
 TOPIC = "hydroficient/grandmarina/#"
-CLIENT_NAME = "GrandMarina-Dashboard-AI"
+CLIENT_NAME = "GrandMarina-Dashboard-Live"
 
 # =============================================================================
 # REPLAY DEFENSE: Shared Secret (must match publisher_defended.py)
@@ -69,54 +76,10 @@ MAX_AGE_SECONDS = 30  # Reject messages older than 30 seconds
 device_counters = {}
 
 # Statistics
-stats = {"accepted": 0, "rejected": 0, "ai_anomalies": 0}
+stats = {"accepted": 0, "rejected": 0}
 
 # Dashboard server instance (initialized in main)
 dashboard = None
-
-# AI model (loaded in main)
-ai_model = None
-
-# =============================================================================
-# AI Model: Feature Extraction
-# =============================================================================
-AI_MODEL_PATH = "C:/Users/gbemi/OneDrive/Documents/ALL Projects/THE GRAND MARINA/Hydroficient Project/anomaly_model.joblib"
-
-# Feature names must match the order used during training
-FEATURE_NAMES = ["pressure_upstream", "flow_rate", "gate_a_position"]
-
-
-def extract_features(readings):
-    """
-    Extract feature vector from sensor readings for AI scoring.
-    Returns a numpy array shaped (1, n_features) ready for model.predict().
-
-    We use three features because the Isolation Forest was trained on these same
-    three values. The order must match: [pressure, flow, gate]. Using .get()
-    with fallbacks handles both P5-style field names and P3-style field names.
-    """
-    features = [
-        readings.get("pressure_upstream", readings.get("pressure_psi", 0)),
-        readings.get("flow_rate", readings.get("flow_rate_lpm", 0)),
-        readings.get("gate_a_position", readings.get("valve_position", 50)),
-    ]
-    return np.array([features])
-
-
-def score_with_ai(readings):
-    """
-    Score sensor readings with the AI model.
-    Returns (is_anomaly, score) where is_anomaly is True if flagged.
-    """
-    if ai_model is None:
-        return False, 0.0
-
-    features = extract_features(readings)
-    prediction = ai_model.predict(features)       # 1 = normal, -1 = anomaly
-    score = ai_model.decision_function(features)   # lower = more anomalous
-
-    is_anomaly = prediction[0] == -1
-    return is_anomaly, float(score[0])
 
 
 # =============================================================================
@@ -246,7 +209,6 @@ def on_connect(client, userdata, flags, rc):
         print(f"[INFO]   HMAC verification: ON")
         print(f"[INFO]   Timestamp window: {MAX_AGE_SECONDS} seconds")
         print(f"[INFO]   Sequence tracking: ON")
-        print(f"[INFO]   AI anomaly detection: {'ON' if ai_model else 'OFF (model not loaded)'}")
         print(f"[INFO]   Live dashboard: ON")
         print(f"[INFO] Subscribing to: {TOPIC}")
         client.subscribe(TOPIC, qos=1)
@@ -255,11 +217,11 @@ def on_connect(client, userdata, flags, rc):
 
 
 def on_message(client, userdata, msg):
-    """Called when a message is received. Validates, scores with AI, and pushes to dashboard."""
+    """Called when a message is received. Validates and pushes to dashboard."""
     try:
         data = json.loads(msg.payload.decode())
 
-        # Run all rule-based validation checks
+        # Run all validation checks
         accepted, results = validate_message(data)
 
         device = data.get("device_id", "Unknown")
@@ -267,33 +229,16 @@ def on_message(client, userdata, msg):
         seq = data.get("sequence", "N/A")
 
         if accepted:
-            # Rules first, then AI: rules block known-bad messages (red) before the AI
-            # model ever sees them. AI only scores messages that passed all rule checks,
-            # looking for subtle anomalies in the sensor values themselves (orange).
-            sensor_data = data.get("readings", {})
-            is_anomaly, ai_score = score_with_ai(sensor_data)
+            stats["accepted"] += 1
 
-            if is_anomaly:
-                stats["accepted"] += 1
-                stats["ai_anomalies"] += 1
+            # Print to terminal (same as Project 6)
+            print(f"\n[ACCEPTED] Device: {device} | Flow: {flow} LPM | Seq: {seq}")
+            print(f"  HMAC: PASS | Timestamp: PASS ({results['timestamp']['detail']}) | Sequence: PASS")
 
-                # Print to terminal
-                print(f"\n[AI ALERT] Device: {device} | Flow: {flow} LPM | Seq: {seq}")
-                print(f"  HMAC: PASS | Timestamp: PASS | Sequence: PASS | AI: ANOMALY (score: {ai_score:.3f})")
-
-                # Push AI anomaly to dashboard
-                if dashboard:
-                    dashboard.log_ai_anomaly(device, sensor_data, ai_score, msg.topic)
-            else:
-                stats["accepted"] += 1
-
-                # Print to terminal
-                print(f"\n[ACCEPTED] Device: {device} | Flow: {flow} LPM | Seq: {seq}")
-                print(f"  HMAC: PASS | Timestamp: PASS | Sequence: PASS | AI: Normal (score: {ai_score:.3f})")
-
-                # Push to dashboard
-                if dashboard:
-                    dashboard.log_valid_message(device, sensor_data, msg.topic)
+            # Push to dashboard
+            if dashboard:
+                sensor_data = data.get("readings", {})
+                dashboard.log_valid_message(device, sensor_data, msg.topic)
 
         else:
             stats["rejected"] += 1
@@ -307,13 +252,14 @@ def on_message(client, userdata, msg):
                     reason = results[check_name]["detail"]
                     break
 
-            # Print to terminal
+            # Print to terminal (same as Project 6)
             print(f"\n[REJECTED] Device: {device} | Flow: {flow} LPM | Seq: {seq}")
             print(f"  Failed check: {failed_check}")
             print(f"  Reason: {reason}")
 
             # Push to dashboard
             if dashboard:
+                # Map check names to dashboard attack types
                 attack_types = {
                     "HMAC": "Message Tampering",
                     "TIMESTAMP": "Stale Message",
@@ -326,8 +272,7 @@ def on_message(client, userdata, msg):
 
         # Show running stats
         total = stats["accepted"] + stats["rejected"]
-        ai_str = f", {stats['ai_anomalies']} AI anomalies" if stats["ai_anomalies"] > 0 else ""
-        print(f"  Stats: {stats['accepted']} accepted, {stats['rejected']} rejected{ai_str} ({total} total)")
+        print(f"  Stats: {stats['accepted']} accepted, {stats['rejected']} rejected ({total} total)")
 
     except json.JSONDecodeError:
         print(f"\n[REJECTED] Non-JSON message on {msg.topic}")
@@ -347,26 +292,13 @@ def on_subscribe(client, userdata, mid, granted_qos):
 # Main
 # =============================================================================
 def main():
-    global dashboard, ai_model
+    global dashboard
 
     print("=" * 60)
-    print("Grand Marina Security Dashboard (AI-Enhanced)")
+    print("Grand Marina Security Dashboard (Live)")
     print("=" * 60)
-
-    # ---- Load AI model ----
-    try:
-        ai_model = joblib.load(AI_MODEL_PATH)
-        print(f"AI Model:        {AI_MODEL_PATH} (loaded)")
-    except FileNotFoundError:
-        print(f"AI Model:        {AI_MODEL_PATH} (NOT FOUND — AI scoring disabled)")
-        print(f"[WARNING] Place {AI_MODEL_PATH} in this directory to enable AI scoring")
-        ai_model = None
-    except Exception as e:
-        print(f"AI Model:        Error loading: {e}")
-        ai_model = None
-
-    print(f"Subscribing to:  {TOPIC}")
-    print(f"Certificate:     {CLIENT_CERT}")
+    print(f"Subscribing to: {TOPIC}")
+    print(f"Certificate:    {CLIENT_CERT}")
     print(f"Max message age: {MAX_AGE_SECONDS} seconds")
     print(f"Dashboard:       http://localhost:8000")
     print("=" * 60)
@@ -419,7 +351,7 @@ def main():
         client.loop_forever()
     except KeyboardInterrupt:
         print(f"\n\n[INFO] Shutting down...")
-        print(f"[STATS] Accepted: {stats['accepted']} | Rejected: {stats['rejected']} | AI Anomalies: {stats['ai_anomalies']}")
+        print(f"[STATS] Accepted: {stats['accepted']} | Rejected: {stats['rejected']}")
 
     client.disconnect()
     print("[INFO] Disconnected from broker")

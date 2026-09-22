@@ -24,6 +24,10 @@ import sys
 import time
 import os
 
+# Repo root (this file lives one level down, e.g. src/ or attacks/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CERTS_DIR = os.path.join(ROOT_DIR, "certs2")
+
 # Handle paho-mqtt 2.0+ API change
 try:
     # paho-mqtt 2.0+
@@ -39,18 +43,18 @@ BROKER_HOST = "localhost"
 BROKER_PORT = 8884
 
 # Certificate files
-CA_CERT = "certs2/ca.pem"
-CLIENT_CERT = "certs2/device-001.pem"
-CLIENT_KEY = "certs2/device-001-key.pem"
+CA_CERT = os.path.join(CERTS_DIR, "ca.pem")
+CLIENT_CERT = os.path.join(CERTS_DIR, "device-001.pem")
+CLIENT_KEY = os.path.join(CERTS_DIR, "device-001-key.pem")
 
 # For wrong CA test - you'll need to create these
-WRONG_CA_CERT = "certs2/wrong-ca.pem"
-WRONG_CLIENT_CERT = "certs2/wrong-device.pem"
-WRONG_CLIENT_KEY = "certs2/wrong-device-key.pem"
+WRONG_CA_CERT = os.path.join(CERTS_DIR, "wrong-ca.pem")
+WRONG_CLIENT_CERT = os.path.join(CERTS_DIR, "wrong-device.pem")
+WRONG_CLIENT_KEY = os.path.join(CERTS_DIR, "wrong-device-key.pem")
 
 # For expired cert test - you'll need to create this
-EXPIRED_CERT = "certs2/expired-device.pem"
-EXPIRED_KEY = "certs2/expired-device-key.pem"
+EXPIRED_CERT = os.path.join(CERTS_DIR, "expired-device.pem")
+EXPIRED_KEY = os.path.join(CERTS_DIR, "expired-device-key.pem")
 
 
 # =============================================================================

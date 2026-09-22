@@ -1,6 +1,11 @@
 # test_no_cert.py - Should be REJECTED
 import paho.mqtt.client as mqtt
 import ssl
+import os
+
+# Repo root (this file lives one level down, e.g. src/ or attacks/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CERTS_DIR = os.path.join(ROOT_DIR, "certs2")
 
 # Handle paho-mqtt 2.0+ API change
 try:
@@ -11,7 +16,7 @@ except AttributeError:
 client = mqtt.Client(client_id="rogue-device", **MQTT_CLIENT_ARGS)
 
 # Only CA cert, NO client certificate
-client.tls_set(ca_certs="C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\ca.pem")
+client.tls_set(ca_certs=os.path.join(CERTS_DIR, "ca.pem"))
 
 try:
     client.connect("localhost", 8883, keepalive=60)

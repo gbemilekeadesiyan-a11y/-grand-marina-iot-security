@@ -12,6 +12,11 @@ import paho.mqtt.client as mqtt
 import ssl
 import json
 from datetime import datetime
+import os
+
+# Repo root (this file lives one level down, e.g. src/ or attacks/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CERTS_DIR = os.path.join(ROOT_DIR, "certs2")
 
 # Handle paho-mqtt 2.0+ API change
 try:
@@ -29,12 +34,12 @@ BROKER_PORT = 8883
 SUBSCRIBER_ID = "dashboard"
 
 # Certificate files
-CA_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\ca.pem"
+CA_CERT = os.path.join(CERTS_DIR, "ca.pem")
 # Note: In a real system, the dashboard would have its own certificate.
 # For this exercise, we reuse device-001's certificate to keep things simple.
 # The key point is that ANY valid certificate from our CA allows connection.
-CLIENT_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-001.pem"
-CLIENT_KEY = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-001-key.pem"
+CLIENT_CERT = os.path.join(CERTS_DIR, "device-001.pem")
+CLIENT_KEY = os.path.join(CERTS_DIR, "device-001-key.pem")
 
 # Subscribe to all Grand Marina devices
 TOPIC = "hydroficient/grandmarina/#"

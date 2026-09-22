@@ -1,21 +1,17 @@
 """
-subscriber_dashboard.py - MQTT Subscriber with Replay Defenses + Live Dashboard
+subscriber_defended.py - MQTT Subscriber with Replay Attack Defenses
 
-Combines subscriber_defended.py (Project 6) with the dashboard server so
-that every accepted and rejected message appears in real time on the web
-dashboard at http://localhost:8000.
-
-Validation checks (same as Project 6):
+Receives sensor data and validates each message against three checks:
   1. HMAC verification (was the message tampered with?)
   2. Timestamp freshness (is the message recent?)
   3. Sequence counter (have we seen this message before?)
 
-New in Project 7:
-  - Starts the dashboard server on launch
-  - Pushes every event to the browser via WebSocket
+Messages that fail ANY check are rejected with a reason.
+
+Based on subscriber_mtls.py from Project 5.
 
 Usage:
-    python subscriber_dashboard.py
+    python subscriber_defended.py
 """
 
 import paho.mqtt.client as mqtt
@@ -23,12 +19,12 @@ import ssl
 import json
 import hmac
 import hashlib
-import time
-import threading
 from datetime import datetime, timezone
+import os
 
-# Import the dashboard server
-from dashboard_server import DashboardServer
+# Repo root (this file lives one level down, e.g. src/ or attacks/)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CERTS_DIR = os.path.join(ROOT_DIR, "certs2")
 
 # Handle paho-mqtt 2.0+ API change
 try:
@@ -43,19 +39,17 @@ BROKER_HOST = "localhost"
 BROKER_PORT = 8884
 SUBSCRIBER_ID = "dashboard"
 
-
 # Certificate files (same as Project 5)
-CA_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\ca.pem"
-CLIENT_CERT = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-001.pem"
-CLIENT_KEY = "C:\\Users\\gbemi\\OneDrive\\Documents\\ALL Projects\\THE GRAND MARINA\\Hydroficient Project\\certs2\\device-001-key.pem"
-
+CA_CERT = os.path.join(CERTS_DIR, "ca.pem")
+CLIENT_CERT = os.path.join(CERTS_DIR, "device-001.pem")
+CLIENT_KEY = os.path.join(CERTS_DIR, "device-001-key.pem")
 
 # Subscribe to all Grand Marina devices
 TOPIC = "hydroficient/grandmarina/#"
-CLIENT_NAME = "GrandMarina-Dashboard-Live"
+CLIENT_NAME = "GrandMarina-Dashboard-Defended"
 
 # =============================================================================
-# REPLAY DEFENSE: Shared Secret (must match publisher_defended.py)
+# REPLAY DEFENSE: Shared Secret (must match publisher)
 # =============================================================================
 SHARED_SECRET = "grandmarina-hydroficient-2024-secret-key"
 
@@ -70,22 +64,21 @@ device_counters = {}
 # Statistics
 stats = {"accepted": 0, "rejected": 0}
 
-# Dashboard server instance (initialized in main)
-dashboard = None
-
 
 # =============================================================================
-# HMAC Verification (same as Project 6)
+# HMAC Verification
 # =============================================================================
 def verify_hmac(message_dict):
     """
     Verify the HMAC signature on a message.
+
     Returns (True, "") if valid, (False, reason) if invalid.
     """
     received_hmac = message_dict.get("hmac")
     if received_hmac is None:
         return False, "No HMAC field in message"
 
+    # Compute what the HMAC should be
     msg_copy = {k: v for k, v in message_dict.items() if k != "hmac"}
     msg_string = json.dumps(msg_copy, sort_keys=True)
 
@@ -98,15 +91,16 @@ def verify_hmac(message_dict):
     if hmac.compare_digest(received_hmac, expected_hmac):
         return True, ""
     else:
-        return False, "HMAC mismatch"
+        return False, "HMAC mismatch — message was tampered with"
 
 
 # =============================================================================
-# Timestamp Validation (same as Project 6)
+# Timestamp Validation
 # =============================================================================
 def check_timestamp(message_dict):
     """
     Check if the message timestamp is within the acceptable window.
+
     Returns (True, age_seconds) if fresh, (False, age_seconds) if stale.
     """
     timestamp_str = message_dict.get("timestamp")
@@ -114,6 +108,7 @@ def check_timestamp(message_dict):
         return False, -1
 
     try:
+        # Parse ISO format timestamp
         msg_time = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
         now = datetime.now(timezone.utc)
         age = (now - msg_time).total_seconds()
@@ -127,11 +122,12 @@ def check_timestamp(message_dict):
 
 
 # =============================================================================
-# Sequence Counter Validation (same as Project 6)
+# Sequence Counter Validation
 # =============================================================================
 def check_sequence(message_dict):
     """
     Check if the sequence number is higher than the last seen.
+
     Returns (True, "") if valid, (False, reason) if replay detected.
     """
     device_id = message_dict.get("device_id", "unknown")
@@ -143,19 +139,26 @@ def check_sequence(message_dict):
     last_seen = device_counters.get(device_id, 0)
 
     if sequence > last_seen:
+        # Valid — update the counter
         device_counters[device_id] = sequence
         return True, ""
     else:
-        return False, f"Sequence {sequence} <= last seen {last_seen}"
+        return False, f"Sequence {sequence} <= last seen {last_seen} (replay detected)"
 
 
 # =============================================================================
-# Combined Validation (same as Project 6)
+# Combined Validation
 # =============================================================================
 def validate_message(message_dict):
     """
-    Run all three checks: HMAC -> Timestamp -> Sequence.
-    Returns (True, results_dict) or (False, results_dict).
+    Run all three validation checks in order: HMAC → Timestamp → Sequence.
+
+    Why this order?
+    - HMAC first: if the message was tampered with, no point checking the rest
+    - Timestamp second: catches old replayed messages
+    - Sequence last: catches recent replays that pass the timestamp check
+
+    Returns (True, results_dict) if all pass, (False, results_dict) if any fail.
     """
     results = {
         "hmac": {"passed": False, "detail": ""},
@@ -201,7 +204,6 @@ def on_connect(client, userdata, flags, rc):
         print(f"[INFO]   HMAC verification: ON")
         print(f"[INFO]   Timestamp window: {MAX_AGE_SECONDS} seconds")
         print(f"[INFO]   Sequence tracking: ON")
-        print(f"[INFO]   Live dashboard: ON")
         print(f"[INFO] Subscribing to: {TOPIC}")
         client.subscribe(TOPIC, qos=1)
     else:
@@ -209,7 +211,7 @@ def on_connect(client, userdata, flags, rc):
 
 
 def on_message(client, userdata, msg):
-    """Called when a message is received. Validates and pushes to dashboard."""
+    """Called when a message is received — now with validation!"""
     try:
         data = json.loads(msg.payload.decode())
 
@@ -222,19 +224,10 @@ def on_message(client, userdata, msg):
 
         if accepted:
             stats["accepted"] += 1
-
-            # Print to terminal (same as Project 6)
             print(f"\n[ACCEPTED] Device: {device} | Flow: {flow} LPM | Seq: {seq}")
             print(f"  HMAC: PASS | Timestamp: PASS ({results['timestamp']['detail']}) | Sequence: PASS")
-
-            # Push to dashboard
-            if dashboard:
-                sensor_data = data.get("readings", {})
-                dashboard.log_valid_message(device, sensor_data, msg.topic)
-
         else:
             stats["rejected"] += 1
-
             # Find which check failed
             failed_check = "unknown"
             reason = "unknown"
@@ -244,23 +237,9 @@ def on_message(client, userdata, msg):
                     reason = results[check_name]["detail"]
                     break
 
-            # Print to terminal (same as Project 6)
             print(f"\n[REJECTED] Device: {device} | Flow: {flow} LPM | Seq: {seq}")
             print(f"  Failed check: {failed_check}")
             print(f"  Reason: {reason}")
-
-            # Push to dashboard
-            if dashboard:
-                # Map check names to dashboard attack types
-                attack_types = {
-                    "HMAC": "Message Tampering",
-                    "TIMESTAMP": "Stale Message",
-                    "SEQUENCE": "Replay Attack"
-                }
-                attack_type = attack_types.get(failed_check, "Security Violation")
-                dashboard.log_rejected_message(
-                    reason, attack_type, device, msg.topic
-                )
 
         # Show running stats
         total = stats["accepted"] + stats["rejected"]
@@ -269,10 +248,6 @@ def on_message(client, userdata, msg):
     except json.JSONDecodeError:
         print(f"\n[REJECTED] Non-JSON message on {msg.topic}")
         stats["rejected"] += 1
-        if dashboard:
-            dashboard.log_rejected_message(
-                "Invalid JSON", "Missing Fields", "unknown", msg.topic
-            )
 
 
 def on_subscribe(client, userdata, mid, granted_qos):
@@ -284,32 +259,16 @@ def on_subscribe(client, userdata, mid, granted_qos):
 # Main
 # =============================================================================
 def main():
-    global dashboard
-
     print("=" * 60)
-    print("Grand Marina Security Dashboard (Live)")
+    print("Grand Marina Security Dashboard (Defended)")
     print("=" * 60)
     print(f"Subscribing to: {TOPIC}")
-    print(f"Certificate:    {CLIENT_CERT}")
+    print(f"Certificate: {CLIENT_CERT}")
     print(f"Max message age: {MAX_AGE_SECONDS} seconds")
-    print(f"Dashboard:       http://localhost:8000")
     print("=" * 60)
 
-    # ---- Start the dashboard server in a background thread ----
-    dashboard = DashboardServer()
-
-    def run_dashboard():
-        try:
-            dashboard.start(open_browser=True)
-        except Exception as e:
-            print(f"[ERROR] Dashboard server failed: {e}")
-
-    dash_thread = threading.Thread(target=run_dashboard, daemon=True)
-    dash_thread.start()
-    time.sleep(2)  # give servers time to bind
-
-    # ---- Set up MQTT client ----
     client = mqtt.Client(client_id=CLIENT_NAME, **MQTT_CLIENT_ARGS)
+
     client.on_connect = on_connect
     client.on_message = on_message
     client.on_subscribe = on_subscribe
@@ -338,7 +297,7 @@ def main():
         print(f"[ERROR] Connection failed: {e}")
         return
 
-    print("[LISTENING] Waiting for messages (Ctrl+C to stop)...\n")
+    print("\n[LISTENING] Waiting for messages (Ctrl+C to stop)...\n")
     try:
         client.loop_forever()
     except KeyboardInterrupt:

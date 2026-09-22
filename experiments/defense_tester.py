@@ -42,8 +42,8 @@ from copy import deepcopy
 # =============================================================================
 SHARED_SECRET = "grandmarina-hydroficient-2024-secret-key"
 MAX_AGE_SECONDS = 30
-RESULTS_FILE = "experiment_results.json"
-CHART_FILE = "defense_comparison.png"
+RESULTS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "experiment_results.json")
+CHART_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "defense_comparison.png")
 
 MESSAGES_PER_TEST = 5  # Number of messages to test per scenario
 
