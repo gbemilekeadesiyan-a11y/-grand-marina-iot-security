@@ -95,6 +95,9 @@
             animation: pulse-dot 2s infinite;
         }
 
+        .live-pill.demo { background: rgba(255,159,10,0.12); border-color: rgba(255,159,10,0.3); color:#b25e00; }
+        .live-pill.demo .live-dot { background: var(--orange); }
+
         @keyframes pulse-dot {
             0%,100%{opacity:1; box-shadow:0 0 0 0 rgba(48,209,88,0.4);}
             50%{opacity:0.8; box-shadow:0 0 0 4px rgba(48,209,88,0);}
@@ -372,7 +375,7 @@
         </div>
     </div>
     <div class="header-right">
-        <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+        <div class="live-pill" id="live-pill" title="Streaming from the live MQTT pipeline"><div class="live-dot"></div><span id="live-label">LIVE</span></div>
         <div class="clock" id="clock">--:--:--</div>
     </div>
 </header>
@@ -640,7 +643,73 @@
         while(log.children.length>60) log.removeChild(log.lastChild);
     }
 
-    connect();
+    // -----------------------------------------------------------------
+    // Demo mode: simulated data for when there's no local pipeline
+    // (GitHub Pages, opening the file directly, or ?demo in the URL).
+    // Emits the same messages dashboard_server_ai.py sends.
+    // -----------------------------------------------------------------
+    const DEMO = new URLSearchParams(location.search).has('demo') ||
+                 !['localhost','127.0.0.1'].includes(location.hostname);
+
+    const DEVICES = [
+        { zone:'main_building', id:'HYDROLOGIC-Device-001', topic:'hydroficient/grandmarina/device-001', p:60, f:50, g:45 },
+        { zone:'pool_spa',      id:'HYDROLOGIC-Device-002', topic:'hydroficient/grandmarina/device-002', p:57, f:47, g:43 },
+        { zone:'kitchen',       id:'HYDROLOGIC-Device-003', topic:'hydroficient/grandmarina/device-003', p:61, f:52, g:46 },
+    ];
+    const ATTACKS = [
+        { type:'Replay Attack',     source:'replay-attacker', reason:'Sequence number already seen' },
+        { type:'Stale Message',     source:'replay-attacker', reason:'Timestamp older than 30s window' },
+        { type:'Message Tampering', source:'mitm-proxy',      reason:'HMAC signature mismatch' },
+        { type:'Missing Fields',    source:'unknown',         reason:'Invalid JSON' },
+    ];
+    const ANOMALIES = [
+        { desc:'Pressure spike with normal flow',        fx: d => ({ p: 72 + Math.random()*6 }) },
+        { desc:'Flow surge while gate nearly closed',    fx: d => ({ f: 74 + Math.random()*10, g: 8 + Math.random()*6 }) },
+        { desc:'Pressure drop — possible leak',          fx: d => ({ p: 38 + Math.random()*5, f: 58 + Math.random()*4 }) },
+        { desc:'Readings valid alone, abnormal together', fx: d => ({ p: 64 + Math.random()*2, f: 41 + Math.random()*2, g: 52 + Math.random()*3 }) },
+    ];
+    const rand = (c, spread) => c + (Math.random()*2 - 1) * spread;
+    const r2 = x => Math.round(x * 100) / 100;   // publisher rounds to 2 decimals
+    const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+
+    function reading(dev, over={}){
+        const flow = r2(over.f ?? rand(dev.f, 5));
+        return {
+            device_id: dev.id, topic: dev.topic, zone: dev.zone,
+            timestamp: new Date().toLocaleTimeString('en-US',{hour12:false}),
+            pressure_psi:   r2(over.p ?? rand(dev.p, 2)),
+            flow_rate_gpm:  flow,
+            flow_rate_lpm:  flow,
+            valve_position: r2(over.g ?? rand(dev.g, 3)),
+        };
+    }
+
+    function startDemo(){
+        const pill = document.getElementById('live-pill');
+        pill.classList.add('demo');
+        pill.title = 'Simulated data — no MQTT broker connected';
+        document.getElementById('live-label').textContent = 'DEMO';
+        addEvent('info','Demo mode — simulated sensor data, no broker connected');
+
+        let i = 0;
+        setInterval(() => handle({ type:'valid_message', data: reading(DEVICES[i++ % DEVICES.length]) }), 1500);
+
+        const attack = () => {
+            const a = pick(ATTACKS);
+            handle({ type:'attack', data:{ attack_type:a.type, source:a.source, reasons:[a.reason] } });
+            setTimeout(attack, 9000 + Math.random()*7000);
+        };
+        const anomaly = () => {
+            const dev = pick(DEVICES), an = pick(ANOMALIES);
+            handle({ type:'ai_anomaly', data:{ ...reading(dev, an.fx(dev)),
+                     ai_score: -(0.02 + Math.random()*0.16).toFixed(3), anomaly_description: an.desc } });
+            setTimeout(anomaly, 14000 + Math.random()*9000);
+        };
+        setTimeout(attack, 5000);
+        setTimeout(anomaly, 11000);
+    }
+
+    if (DEMO) startDemo(); else connect();
 </script>
 </body>
 </html>
