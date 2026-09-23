@@ -2,6 +2,8 @@
 
 > **Hydroficient IoT Cyber Defense Externship** · Extern.com · Top 10% of Global Learners
 
+**[▶ Try the live dashboard demo](https://gbemilekeadesiyan-a11y.github.io/-grand-marina-iot-security/)** — runs in your browser with simulated sensor data, no setup needed.
+
 A complete IoT security pipeline built to protect the Grand Marina Hotel's water management system — 500 rooms, 3 device zones, streaming sensor data every few seconds. The mission: think like an attacker, then become the defender.
 
 ---
@@ -181,13 +183,15 @@ python attacks/attack_simulator.py
 Then open **http://localhost:8000** to see GbemiShield live.
 
 ### Just want to see the dashboard?
-The HTML needs its Python server (it connects to a WebSocket on port 8765), so double-clicking
-the `.html` file shows an empty "offline" page. To open the dashboard UI without the broker:
-```bash
-python dashboard/dashboard_server_ai.py   # AI dashboard
-python dashboard/dashboard_server.py      # rule-based dashboard
-```
-Both serve on http://localhost:8000. Tiles stay empty until a subscriber pushes events.
+Open the **[online demo](https://gbemilekeadesiyan-a11y.github.io/-grand-marina-iot-security/)**, or just double-click `dashboard/dashboard_ai.html`.
+
+The AI dashboard has a built-in **demo mode**: whenever it isn't served from `localhost` (or you add
+`?demo` to the URL) it generates realistic sensor readings, blocked replay/tampering attacks and AI
+anomalies right in the browser, and the header badge reads **DEMO** instead of **LIVE**. No broker,
+certificates or Python needed.
+
+When you run the real pipeline (`python src/subscriber_dashboard_ai.py`) the page is served from
+`localhost:8000` and switches to live data from the WebSocket on port 8765 automatically.
 
 ---
 
