@@ -2,7 +2,7 @@
 
 > **Hydroficient IoT Cyber Defense Externship** · Extern.com · Top 10% of Global Learners
 
-**[▶ Try the live dashboard demo](https://gbemilekeadesiyan-a11y.github.io/-grand-marina-iot-security/)** — runs in your browser with simulated sensor data, no setup needed.
+**[▶ Try the live dashboard demo](https://gbemilekeadesiyan-a11y.github.io/GbemiShield-Grand-Marina-IoT-Security-System/)** — runs in your browser with simulated sensor data, no setup needed.
 
 A complete IoT security pipeline built to protect the Grand Marina Hotel's water management system — 500 rooms, 3 device zones, streaming sensor data every few seconds. The mission: think like an attacker, then become the defender.
 
@@ -183,7 +183,7 @@ python attacks/attack_simulator.py
 Then open **http://localhost:8000** to see GbemiShield live.
 
 ### Just want to see the dashboard?
-Open the **[online demo](https://gbemilekeadesiyan-a11y.github.io/-grand-marina-iot-security/)**, or just double-click `dashboard/dashboard_ai.html`.
+Open the **[online demo](https://gbemilekeadesiyan-a11y.github.io/GbemiShield-Grand-Marina-IoT-Security-System/)**, or just double-click `dashboard/dashboard_ai.html`.
 
 The AI dashboard has a built-in **demo mode**: whenever it isn't served from `localhost` (or you add
 `?demo` to the URL) it generates realistic sensor readings, blocked replay/tampering attacks and AI
